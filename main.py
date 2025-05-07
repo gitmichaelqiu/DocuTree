@@ -1,11 +1,33 @@
 import os
+import tkinter as tk
+from tkinter import filedialog, simpledialog
 
-def get_user_input(prompt):
-    return input(prompt).strip()
+def get_directory_path():
+    root = tk.Tk()
+    root.withdraw()  # Hide main window
+    directory = filedialog.askdirectory(title="Select Directory")
+    return directory
+
+def get_extensions():
+    root = tk.Tk()
+    root.withdraw()
+    extensions = simpledialog.askstring("Extensions", "Enter comma-separated file extensions (e.g., .txt,.md):")
+    if extensions:
+        return [ext.strip().lower() for ext in extensions.split(',')]
+    return []
+
+def get_save_location():
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.asksaveasfilename(
+        defaultextension=".md",
+        filetypes=[("Markdown files", "*.md"), ("All files", "*.*")],
+        title="Save Output As"
+    )
+    return file_path
 
 def build_tree_structure(files):
     tree = {}
-
     for file_path in files:
         parts = file_path.split(os.sep)
         current_level = tree
@@ -14,10 +36,10 @@ def build_tree_structure(files):
                 current_level[part] = {}
             current_level = current_level[part]
         current_level[parts[-1]] = None  # mark as a file
-
     return tree
 
 def print_tree(tree, prefix=""):
+    output = ""
     entries = list(tree.keys())
     for i, name in enumerate(entries):
         is_last = (i == len(entries) - 1)
@@ -28,17 +50,21 @@ def print_tree(tree, prefix=""):
             new_prefix = prefix.replace("└── ", "    ") + ("    " if is_last else "│   ")
 
         if tree[name] is None:  # It's a file
-            print(f"{prefix}├── {name}")
+            output += f"{prefix}├── {name}\n"
         else:  # It's a folder
-            print(f"{prefix}├── {name}")
-            print_tree(tree[name], new_prefix)
+            output += f"{prefix}├── {name}\n"
+            output += print_tree(tree[name], new_prefix)
+    return output
 
 def generate_markdown_output(root, files):
     result = "\n---\n"
     for file in files:
         full_path = os.path.join(root, file)
-        with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
-            content = f.read()
+        try:
+            with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except Exception as e:
+            content = f"[Error reading file: {str(e)}]"
         result += f"\n## {file}\n\n"
         result += "```\n"
         result += content
@@ -46,16 +72,17 @@ def generate_markdown_output(root, files):
     return result
 
 def main():
-    directory = get_user_input("Enter the directory path: ")
-    while not os.path.isdir(directory):
-        print("Invalid directory. Please try again.")
-        directory = get_user_input("Enter the directory path: ")
+    directory = get_directory_path()
+    if not directory:
+        print("No directory selected.")
+        return
 
-    extensions_input = get_user_input("Enter comma-separated file extensions (e.g., .txt,.md): ")
-    extensions = [ext.strip().lower() for ext in extensions_input.split(',')]
+    extensions = get_extensions()
+    if not extensions:
+        print("No extensions provided.")
+        return
 
     matched_files = []
-
     for root_dir, dirs, files in os.walk(directory):
         for file in files:
             if any(file.lower().endswith(ext) for ext in extensions):
@@ -66,13 +93,28 @@ def main():
         print("No matching files found.")
         return
 
-    print("\n# " + os.path.basename(os.path.abspath(directory)) + "\n")
-    print(".")
+    # Generate Tree View
     tree_structure = build_tree_structure(matched_files)
-    print_tree(tree_structure)
+    tree_output = ".\n" + print_tree(tree_structure)
 
-    markdown_output = generate_markdown_output(directory, matched_files)
-    print(markdown_output)
+    # Generate Markdown Content
+    markdown_content = (
+        f"# {os.path.basename(os.path.abspath(directory))}\n\n"
+        f"{tree_output}"
+        f"{generate_markdown_output(directory, matched_files)}"
+    )
+
+    # Ask where to save
+    save_path = get_save_location()
+    if save_path:
+        try:
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            print(f"File saved successfully to: {save_path}")
+        except Exception as e:
+            print(f"Failed to save file: {e}")
+    else:
+        print("Save operation canceled.")
 
 if __name__ == "__main__":
     main()
