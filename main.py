@@ -16,11 +16,12 @@ def get_extensions():
         return [ext.strip().lower() for ext in extensions.split(',')]
     return []
 
-def get_save_location():
+def get_save_location(default_name):
     root = tk.Tk()
     root.withdraw()
     file_path = filedialog.asksaveasfilename(
         defaultextension=".md",
+        initialfile=f"{default_name}.md",
         filetypes=[("Markdown files", "*.md"), ("All files", "*.*")],
         title="Save Output As"
     )
@@ -98,14 +99,15 @@ def main():
     tree_output = ".\n" + print_tree(tree_structure)
 
     # Generate Markdown Content
+    root_name = os.path.basename(os.path.abspath(directory))
     markdown_content = (
-        f"# {os.path.basename(os.path.abspath(directory))}\n\n"
+        f"# {root_name}\n\n"
         f"{tree_output}"
         f"{generate_markdown_output(directory, matched_files)}"
     )
 
-    # Ask where to save
-    save_path = get_save_location()
+    # Ask where to save with suggested filename
+    save_path = get_save_location(root_name)
     if save_path:
         try:
             with open(save_path, 'w', encoding='utf-8') as f:
