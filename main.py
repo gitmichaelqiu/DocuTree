@@ -2,11 +2,35 @@ import os
 import tkinter as tk
 from tkinter import filedialog, simpledialog
 
+# --- Configuration ---
+EXTENSION_TO_LANGUAGE = {
+    ".py": "python",
+    ".js": "javascript",
+    ".json": "json",
+    ".html": "html",
+    ".css": "css",
+    ".md": "markdown",
+    ".txt": "",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".h": "c",
+    ".java": "java",
+    ".sh": "bash",
+    ".xml": "xml",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".rb": "ruby",
+    ".php": "php",
+    ".sql": "sql",
+    ".go": "go",
+    ".rs": "rust",
+}
+
+# --- Functions ---
 def get_directory_path():
     root = tk.Tk()
-    root.withdraw()  # Hide main window
-    directory = filedialog.askdirectory(title="Select Directory")
-    return directory
+    root.withdraw()
+    return filedialog.askdirectory(title="Select Directory")
 
 def get_extensions():
     root = tk.Tk()
@@ -19,42 +43,44 @@ def get_extensions():
 def get_save_location(default_name):
     root = tk.Tk()
     root.withdraw()
-    file_path = filedialog.asksaveasfilename(
+    return filedialog.asksaveasfilename(
         defaultextension=".md",
         initialfile=f"{default_name}.md",
         filetypes=[("Markdown files", "*.md"), ("All files", "*.*")],
         title="Save Output As"
     )
-    return file_path
 
 def build_tree_structure(files):
     tree = {}
     for file_path in files:
         parts = file_path.split(os.sep)
         current_level = tree
-        for part in parts[:-1]:  # folders
+        for part in parts[:-1]:
             if part not in current_level:
                 current_level[part] = {}
             current_level = current_level[part]
         current_level[parts[-1]] = None  # mark as a file
     return tree
 
-def print_tree(tree, prefix=""):
+def print_tree(tree, prefix="", is_last=True):
     output = ""
     entries = list(tree.keys())
     for i, name in enumerate(entries):
-        is_last = (i == len(entries) - 1)
-        new_prefix = "    " + prefix
-        if prefix.endswith("├── "):
-            new_prefix = prefix.replace("├── ", "│   ") + ("    " if is_last else "│   ")
-        elif prefix.endswith("└── "):
-            new_prefix = prefix.replace("└── ", "    ") + ("    " if is_last else "│   ")
+        is_last_entry = (i == len(entries) - 1)
+        new_prefix = ""
 
-        if tree[name] is None:  # It's a file
-            output += f"{prefix}├── {name}\n"
-        else:  # It's a folder
-            output += f"{prefix}├── {name}\n"
-            output += print_tree(tree[name], new_prefix)
+        if is_last_entry:
+            connector = "└── "
+            new_prefix_segment = "    "
+        else:
+            connector = "├── "
+            new_prefix_segment = "│   "
+
+        output += f"{prefix}{connector}{name}\n"
+
+        if tree[name] is not None:  # It's a folder
+            extended_prefix = prefix + ("" if is_last_entry else "│") + "   "
+            output += print_tree(tree[name], extended_prefix, is_last=is_last_entry)
     return output
 
 def generate_markdown_output(root, files):
@@ -66,8 +92,14 @@ def generate_markdown_output(root, files):
                 content = f.read()
         except Exception as e:
             content = f"[Error reading file: {str(e)}]"
+
+        _, ext = os.path.splitext(file)
+        lang = ext.lower()
+        if lang in EXTENSION_TO_LANGUAGE:
+            lang = EXTENSION_TO_LANGUAGE[lang]
+
         result += f"\n## {file}\n\n"
-        result += "```\n"
+        result += f"```{lang}\n"
         result += content
         result += "\n```\n"
     return result
