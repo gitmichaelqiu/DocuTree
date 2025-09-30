@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 from tkinter import filedialog, simpledialog
+import argparse
 
 # --- Configuration ---
 EXTENSION_TO_LANGUAGE = {
@@ -27,12 +28,12 @@ EXTENSION_TO_LANGUAGE = {
 }
 
 # --- Functions ---
-def get_directory_path():
+def get_directory_path_gui():
     root = tk.Tk()
     root.withdraw()
     return filedialog.askdirectory(title="Select Directory")
 
-def get_extensions():
+def get_extensions_gui():
     root = tk.Tk()
     root.withdraw()
     extensions = simpledialog.askstring("Extensions", "Enter comma-separated file extensions (e.g., .txt,.md):")
@@ -67,19 +68,16 @@ def print_tree(tree, prefix="", is_last=True):
     entries = list(tree.keys())
     for i, name in enumerate(entries):
         is_last_entry = (i == len(entries) - 1)
-        new_prefix = ""
-
         if is_last_entry:
             connector = "└── "
-            new_prefix_segment = "    "
+            extended_prefix = prefix + "    "
         else:
             connector = "├── "
-            new_prefix_segment = "│   "
+            extended_prefix = prefix + "│   "
 
         output += f"{prefix}{connector}{name}\n"
 
         if tree[name] is not None:  # It's a folder
-            extended_prefix = prefix + ("" if is_last_entry else "│") + "   "
             output += print_tree(tree[name], extended_prefix, is_last=is_last_entry)
     return output
 
@@ -104,17 +102,39 @@ def generate_markdown_output(root, files):
         result += "\n```\n"
     return result
 
-def main():
-    directory = get_directory_path()
-    if not directory:
-        print("No directory selected.")
-        return
+def get_extensions_from_input(extensions_str):
+    if extensions_str:
+        return [ext.strip().lower() for ext in extensions_str.split(',')]
+    return []
 
-    extensions = get_extensions()
+def main():
+    parser = argparse.ArgumentParser(description="Generate a Markdown file with code snippets and directory tree.")
+    parser.add_argument("-i", "--input", help="Input directory path (bypass GUI)")
+    parser.add_argument("-e", "--extensions", help="Comma-separated list of file extensions (e.g., .py,.md)")
+    args = parser.parse_args()
+
+    # Determine directory
+    if args.input:
+        directory = os.path.abspath(args.input)
+        if not os.path.isdir(directory):
+            print(f"Error: '{directory}' is not a valid directory.")
+            return
+    else:
+        directory = get_directory_path_gui()
+        if not directory:
+            print("No directory selected.")
+            return
+
+    # Determine extensions
+    if args.extensions:
+        extensions = get_extensions_from_input(args.extensions)
+    else:
+        extensions = get_extensions_gui()
     if not extensions:
         print("No extensions provided.")
         return
 
+    # Find matching files
     matched_files = []
     for root_dir, dirs, files in os.walk(directory):
         for file in files:
@@ -138,17 +158,25 @@ def main():
         f"{generate_markdown_output(directory, matched_files)}"
     )
 
-    # Ask where to save with suggested filename
-    save_path = get_save_location(root_name)
-    if save_path:
-        try:
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
-            print(f"File saved successfully to: {save_path}")
-        except Exception as e:
-            print(f"Failed to save file: {e}")
+    # Save location
+    if args.input:
+        # Auto-generate save path if input given (e.g., /path/to/project.md)
+        default_save = os.path.join(os.path.dirname(directory), f"{root_name}.md")
+        save_path = default_save
+        # Optional: you could still ask for save location, but for CLI we auto-save
+        # Or prompt only if you want — here we auto-save
     else:
-        print("Save operation canceled.")
+        save_path = get_save_location(root_name)
+        if not save_path:
+            print("Save operation canceled.")
+            return
+
+    try:
+        with open(save_path, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        print(f"File saved successfully to: {save_path}")
+    except Exception as e:
+        print(f"Failed to save file: {e}")
 
 if __name__ == "__main__":
     main()
