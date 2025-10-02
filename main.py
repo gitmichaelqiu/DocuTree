@@ -25,6 +25,7 @@ EXTENSION_TO_LANGUAGE = {
     ".sql": "sql",
     ".go": "go",
     ".rs": "rust",
+    ".swift": "swift",
 }
 
 # --- Functions ---
