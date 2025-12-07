@@ -19,7 +19,6 @@ python main.py
 .
 ├── file1.extension
 ├── subfolder
-│    ├──file2.extension
 
 ---
 
