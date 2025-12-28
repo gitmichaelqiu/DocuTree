@@ -1,4 +1,4 @@
-This is a program that provides a tree view of the directory and lists all files with designated extensions.
+This is a program that provides a **tree view** of the directory and lists all files with **designated extensions**.
 
 Example File Structure:
 
