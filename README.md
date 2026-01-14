@@ -1,6 +1,17 @@
+# DocuTree
+
 This is a program that provides a **tree view** of the directory and lists all files with **designated extensions**.
 
-Example File Structure:
+## Usage
+
+```bash
+python main.py
+
+-i path/to/folder
+-e extension
+```
+
+## Example File Structure
 
 ```markdown
 # Example
@@ -24,3 +35,7 @@ content of file1
 content of file2
 \```
 ```
+
+## License
+
+Under [MIT License](LICENSE).
